@@ -33,7 +33,7 @@ unsigned long lastDelay = 0;
 int codeNumbers[] = {1, 2, 3, 4};   //available numbers at each position
 int posDisplay = 0;   //digit postition on display
 
-int password[] = {4, 2, 3, 1};    //predefined password
+int password[] = {4, 2, 1, 3};    //predefined password
 int inputPass[] = {};   //password input by user
 int indexPass = 0;
 
@@ -93,12 +93,23 @@ void setup()
 //button == 1 - left button
 //button == 2 - right button
 
+  int alarm() 
+  {
+    tone(BUZZER, 450);
+    delay(20);
+    tone(BUZZER, 900);
+    delay(20);
+  }
+  
 void loop()
 {
   int readLDR = analogRead(LDR);
   int button = read_button();
   //Display.show("----");
 
+//trigger alarm when LDR value changes above threshhold
+if (readLDR <= MAX_LDR_THRESHOLD)
+{
   //iterate through display digits in order to input password
   if (button == 1 && posDisplay == 0) //first digit
   {
@@ -112,22 +123,21 @@ void loop()
   {
     indexPass = 0;
     posDisplay++;
+    Serial.println(inputPass[posDisplay]);
   }
-
   else if (button == 1 && posDisplay == 1) //second digit
   {
     Display.show(codeNumbers[indexPass] * 100);
     inputPass[posDisplay] = codeNumbers[indexPass];
     indexPass++;
     indexPass %= 4;
-    Serial.println(codeNumbers[indexPass]);
+    //Serial.println(codeNumbers[indexPass]);
   }
   else if (button == 2 && posDisplay == 1)
   {
     indexPass = 0;
     posDisplay++;
   }
-
   else if (button == 1 && posDisplay == 2) //third digit
   {
     Display.show(codeNumbers[indexPass] * 10);
@@ -140,6 +150,7 @@ void loop()
   {
     indexPass = 0;
     posDisplay++;
+    Serial.println(inputPass[posDisplay]);
   }
 
   else if (button == 1 && posDisplay == 3) //fourth digit
@@ -154,8 +165,18 @@ void loop()
   {
     indexPass = 0;
     posDisplay++;
+    Serial.println(inputPass[posDisplay]);
   }
-
+}
+else 
+{
+  Display.show("----");
+  digitalWrite(LED_RED, HIGH);
+  alarm();
+  delay(5000);
+  digitalWrite(LED_RED, LOW);
+  noTone(BUZZER);
+}
 
   //  if button-left = pressed:
   //    Display.show(codeNumbers[index] * 1000)
