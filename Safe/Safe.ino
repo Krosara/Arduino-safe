@@ -31,11 +31,11 @@ int buttonStateRight = HIGH;
 unsigned long lastDelay = 0;
 
 int codeNumbers[] = {1, 2, 3, 4};   //available numbers at each position
-int pos = 0;
+int posDisplay = 0;   //digit postition on display
 
-int[] password = [4, 2, 3, 1];    //predefined password
-int[] input = [];
-int index = 0;
+int password[] = {4, 2, 3, 1};    //predefined password
+int inputPass[] = {};   //password input by user
+int indexPass = 0;
 
 
 
@@ -87,6 +87,7 @@ void setup()
   pinMode(BUZZER, OUTPUT);
   Serial.begin(9600);
   Display.clear();
+  Display.show("----");
 }
 
 //button == 1 - left button
@@ -96,33 +97,91 @@ void loop()
 {
   int readLDR = analogRead(LDR);
   int button = read_button();
-  //Display.show("0000");
+  //Display.show("----");
 
-  if button-left = pressed:
-    Display.show(codeNumbers[index] * 1000)
-    input[pos] = codeNumbers[index];
-    index += 1
-    index %= 4
-  if button-right = pressed
-    index = 0
-    pos += 1
-    
-//  if ( button == 1)
-//  {
-//    Display.showCharAt(pos, '0' + codePos0);
-//    pos++;
-//    codePos0++;
-//    if ( pos > 3) 
-//    {
-//      pos = 0;
-//    }
-//  }
-//  else if ( button == 2)
-//  {
-//    digitalWrite(LED_GREEN, LOW);
-//    digitalWrite(LED_RED, HIGH);
-//    delay(5000);
-//    digitalWrite(LED_RED, LOW);
-//  }
-//  //Serial.println(readLDR);
+  //iterate through display digits in order to input password
+  if (button == 1 && posDisplay == 0) //first digit
+  {
+    Display.show(codeNumbers[indexPass] * 1000);
+    inputPass[posDisplay] = codeNumbers[indexPass];
+    indexPass++;
+    indexPass %= 4;
+    Serial.println(codeNumbers[indexPass]);
+  }
+  else if (button == 2 && posDisplay == 0)
+  {
+    indexPass = 0;
+    posDisplay++;
+  }
+
+  else if (button == 1 && posDisplay == 1) //second digit
+  {
+    Display.show(codeNumbers[indexPass] * 100);
+    inputPass[posDisplay] = codeNumbers[indexPass];
+    indexPass++;
+    indexPass %= 4;
+    Serial.println(codeNumbers[indexPass]);
+  }
+  else if (button == 2 && posDisplay == 1)
+  {
+    indexPass = 0;
+    posDisplay++;
+  }
+
+  else if (button == 1 && posDisplay == 2) //second digit
+  {
+    Display.show(codeNumbers[indexPass] * 10);
+    inputPass[posDisplay] = codeNumbers[indexPass];
+    indexPass++;
+    indexPass %= 4;
+    Serial.println(codeNumbers[indexPass]);
+  }
+  else if (button == 2 && posDisplay == 2)
+  {
+    indexPass = 0;
+    posDisplay++;
+  }
+
+  else if (button == 1 && posDisplay == 3) //second digit
+  {
+    Display.show(codeNumbers[indexPass]);
+    inputPass[posDisplay] = codeNumbers[indexPass];
+    indexPass++;
+    indexPass %= 4;
+    Serial.println(codeNumbers[indexPass]);
+  }
+  else if (button == 2 && posDisplay == 3)
+  {
+    indexPass = 0;
+    posDisplay++;
+  }
+
+
+  //  if button-left = pressed:
+  //    Display.show(codeNumbers[index] * 1000)
+  //    input[pos] = codeNumbers[index];
+  //    index += 1
+  //    index %= 4
+  //  if button-right = pressed
+  //    index = 0
+  //    pos += 1
+
+  //  if ( button == 1)
+  //  {
+  //    Display.showCharAt(pos, '0' + codePos0);
+  //    pos++;
+  //    codePos0++;
+  //    if ( pos > 3)
+  //    {
+  //      pos = 0;
+  //    }
+  //  }
+  //  else if ( button == 2)
+  //  {
+  //    digitalWrite(LED_GREEN, LOW);
+  //    digitalWrite(LED_RED, HIGH);
+  //    delay(5000);
+  //    digitalWrite(LED_RED, LOW);
+  //  }
+  //  //Serial.println(readLDR);
 }
