@@ -128,7 +128,7 @@ void loop()
     posDisplay++;
   }
 
-  else if (button == 1 && posDisplay == 2) //second digit
+  else if (button == 1 && posDisplay == 2) //third digit
   {
     Display.show(codeNumbers[indexPass] * 10);
     inputPass[posDisplay] = codeNumbers[indexPass];
@@ -142,7 +142,7 @@ void loop()
     posDisplay++;
   }
 
-  else if (button == 1 && posDisplay == 3) //second digit
+  else if (button == 1 && posDisplay == 3) //fourth digit
   {
     Display.show(codeNumbers[indexPass]);
     inputPass[posDisplay] = codeNumbers[indexPass];
