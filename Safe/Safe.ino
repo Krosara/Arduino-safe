@@ -17,7 +17,7 @@ const int LED_GREEN = 5;
 const int BUZZER = 3;
 const int MIN_LDR_VALUE = 0;
 const int MAX_LDR_VALUE = 1023;
-const int MIN_LDR_THRESHOLD = 300;
+const int MIN_LDR_THRESHOLD = 100;
 const int MAX_LDR_THRESHOLD = 900;
 
 String passCode = "4312";   //predefined password
@@ -46,6 +46,13 @@ unsigned long startMillis;
 //button debounce
 bool detectInput = false;
 bool detectConfirm = false;
+
+//keep the mode
+int mode = 1;
+unsigned long StartTime;
+unsigned long curr;
+unsigned long ElapsedTime;
+
 
 int buttonInput()   //left (input) button press with button debounce
 {
@@ -102,106 +109,78 @@ void setup()
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_GREEN, OUTPUT);
   pinMode(BUZZER, OUTPUT);
-  startMillis = millis();
   Serial.begin(9600);
 }
 
 
 void loop()
 {
-
-
+  StartTime = millis();
+  Serial.print("StartTime:");
+  Serial.println(StartTime);
   int readLDR = analogRead(LDR);
+  if (readLDR  <= MAX_LDR_THRESHOLD && readLDR > MIN_LDR_THRESHOLD && inputFailed < 3 && isLocked == true) {
+    mode = 1;
+  }
+  else if (readLDR > MAX_LDR_THRESHOLD) {
+    mode = 2;
+  }
+  else if (inputFailed >= 3) {
+    mode = 3;
+  }
+  else if (isLocked == false) {
+    mode = 5;
+  }
 
-  if (readLDR <= MAX_LDR_THRESHOLD)
-  {
-    if (inputFailed < 3)
+  ///////////////////////
+  //Normal working mode//
+  ///////////////////////
+
+  if (mode == 1) {
+    if (positionDigit <= 4 && isLocked == true)
     {
-      if (positionDigit <= 4 && isLocked == true)
+      buttonInput();
+      //input button function
+      if (detectInput)
       {
-        buttonInput();
-        //input button function
-        if (detectInput)
-        {
-          valueDigit = valueDigit % 4 + 1;    //cycle numbers 1-4 on display
-          inputCode = String(finalInputCode) + String(valueDigit) + "---";
-          detectInput = false;
-        }
-        Display.show(inputCode);
-        buttonConfirm();
-        if (detectConfirm)
-        {
-          finalInputCode += valueDigit;
-          positionDigit++;
-          valueDigit = 1;
-          inputCode = String(finalInputCode) + "1---";
-          detectConfirm = false;
-        }
+        valueDigit = valueDigit % 4 + 1;    //cycle numbers 1-4 on display
+        inputCode = String(finalInputCode) + String(valueDigit) + "---";
+        detectInput = false;
       }
-      else
+      Display.show(inputCode);
+      buttonConfirm();
+      if (detectConfirm)
       {
+        finalInputCode += valueDigit;
+        positionDigit++;
+        valueDigit = 1;
+        inputCode = String(finalInputCode) + "1---";
+        detectConfirm = false;
+      }
+      if (positionDigit > 4) {
         finalInputCode.remove(4, 3);
         if (finalInputCode == passCode)
         {
           if (isLocked == true)
           {
-            valueDigit = 1;
-            positionDigit = 1;
-            inputCode = "1---";
-            finalInputCode = "";
             digitalWrite(LED_GREEN, HIGH);
-            delay(500);
-            digitalWrite(LED_GREEN, LOW);
+            mode = 5;
             isLocked = false;
-            inputFailed = 0;
-            while (isLocked == false)
-            {
-              readLDR = analogRead(LDR);
-              Serial.println("hui");
-              digitalWrite(LED_GREEN, HIGH);
-              if (readLDR < MIN_LDR_THRESHOLD && isLocked == false)
-              {
-                valueDigit = 1;
-                positionDigit = 1;
-                inputCode = "1---";
-                finalInputCode = "";
-                digitalWrite(LED_GREEN, LOW);
-                isLocked = true;
-                break;
-              }
-            }
           }
           buttonInput();
         }
-        else
-        {
-          digitalWrite(LED_RED, HIGH);
-          delay(500);
-          digitalWrite(LED_RED, LOW);
-          inputFailed++;
-          //reset the code
-          valueDigit = 1;
-          positionDigit = 1;
-          inputCode = "1---";
-          finalInputCode = "";
+        else {
+          mode = 4;
         }
       }
     }
-    else if (inputFailed >= 3)    //code input failed 3 times
-    {
-      Serial.println("ALARM SAFE 4312");
-      blinkRedLED();
-      tone(BUZZER, 600, buzTime);
-      //reset the code
-      valueDigit = 1;
-      positionDigit = 1;
-      inputCode = "1---";
-      finalInputCode = "";
-      inputFailed = 0;
-    }
   }
-  else if (readLDR > MAX_LDR_THRESHOLD)   //alarm
-  {
+
+  ////////////////////////
+  //Burglar working mode//
+  ////////////////////////
+
+  if (mode == 2) {
     tone(BUZZER, 500);
     digitalWrite(LED_RED, HIGH);
     delay(5000);
@@ -213,17 +192,80 @@ void loop()
     finalInputCode = "";
     inputFailed = 0;
   }
-  readLDR = analogRead(LDR);
-  //Serial.println(readLDR);
-  if (readLDR < MIN_LDR_THRESHOLD && isLocked == false)
-  {
+
+  /////////////////
+  //3 times wrong//
+  /////////////////
+
+  if (mode == 3) {
+    //Serial.println("ALARM SAFE 4312");
+    curr = millis();
+    Serial.print("Curr:");
+    Serial.println(curr);
+    if (StartTime - (curr - 5000) == 5000) {
+
+      unsigned long currentMillis = millis();
+      if (currentMillis - previousMillis >= interval)
+      {
+        previousMillis = currentMillis;                 // save the last time you blinked the LED
+        if (ledState == LOW)                            // if the LED is off turn it on and vice-versa:
+        {
+          ledState = HIGH;
+        }
+        else
+        {
+          ledState = LOW;
+        }
+        // set the LED with the ledState of the variable:
+        digitalWrite(LED_RED, ledState);
+      }
+    }
+    else {
+      tone(BUZZER, 600, buzTime);
+      //reset the code
+
+      valueDigit = 1;
+      positionDigit = 1;
+      inputCode = "1---";
+      finalInputCode = "";
+      inputFailed = 0;
+    }
+
+  }
+
+  //////////////
+  //Wrong code//
+  //////////////
+
+  if (mode == 4) {
+    digitalWrite(LED_RED, HIGH);
+    delay(500);
+    digitalWrite(LED_RED, LOW);
+    inputFailed++;
+    //reset the code
     valueDigit = 1;
     positionDigit = 1;
     inputCode = "1---";
     finalInputCode = "";
-    inputFailed = 0;
-    isLocked = true;
   }
 
+  ////////////////
+  //Correct code//
+  ////////////////
 
+  if (mode == 5) {
+
+    readLDR = analogRead(LDR);
+    digitalWrite(LED_GREEN, HIGH);
+    if (readLDR < MIN_LDR_THRESHOLD && isLocked == false)
+    {
+      valueDigit = 1;
+      positionDigit = 1;
+      inputCode = "1---";
+      finalInputCode = "";
+      digitalWrite(LED_GREEN, LOW);
+      isLocked = true;
+      mode = 1;
+    }
+  }
 }
