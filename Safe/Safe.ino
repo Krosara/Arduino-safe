@@ -89,14 +89,14 @@ void loop()
 {
   int readLDR = analogRead(LDR);
 
-  if (inputFailed < 3)
+  if (readLDR <= MAX_LDR_THRESHOLD)
   {
-    if (readLDR <= MAX_LDR_THRESHOLD)
+    if (inputFailed < 3)
     {
       if (positionDigit <= 4)
       {
         buttonInput();
-        if (detectInput == false)
+        if (detectInput)
         {
           valueDigit = valueDigit % 4 + 1;    //1-2-3-4-1-2-3-4 on display
           inputCode = String(finalInputCode) + String(valueDigit) + "---";
@@ -104,7 +104,7 @@ void loop()
         }
         Display.show(inputCode);
         buttonConfirm();
-        if (detectConfirm == false)
+        if (detectConfirm)
         {
           finalInputCode += valueDigit;
           positionDigit++;
@@ -118,13 +118,20 @@ void loop()
         finalInputCode.remove(4, 3);
         if (finalInputCode == passCode)
         {
-          if (alreadyExecuted == false)
+          if (!alreadyExecuted)
+          {
+            digitalWrite(LED_GREEN, HIGH);
+            delay(500);
+            digitalWrite(LED_GREEN, LOW);
+          }
+          else
           {
             valueDigit = 1;
             positionDigit = 1;
             inputCode = "1---";
             finalInputCode = "";
           }
+          buttonInput();
         }
         else
         {
@@ -143,17 +150,26 @@ void loop()
     }
     else
     {
-      tone(BUZZER, 500);
-      delay(5000);
-      noTone(BUZZER);
+      digitalWrite(LED_RED, HIGH);
+      delay(2500);
+      digitalWrite(LED_RED, LOW);
+      valueDigit = 1;
+      positionDigit = 1;
+      inputCode = "1---";
+      finalInputCode = "";
     }
   }
   else
   {
-    for (int i = 5; i > 0; i--)
-    {
-      Display.show(i);
-      alarm();
-    }
+    tone(BUZZER, 500);
+    digitalWrite(LED_RED, HIGH);
+    delay(5000);
+    noTone(BUZZER);
+    digitalWrite(LED_RED, LOW);
+    valueDigit = 1;
+    positionDigit = 1;
+    inputCode = "1---";
+    finalInputCode = "";
   }
+
 }
