@@ -17,6 +17,7 @@ const int LED_GREEN = 5;
 const int BUZZER = 3;
 const int MIN_LDR_VALUE = 0;
 const int MAX_LDR_VALUE = 1023;
+const int MIN_LDR_THRESHOLD = 150;
 const int MAX_LDR_THRESHOLD = 900;
 
 String passCode = "4312";   //predefined password
@@ -76,14 +77,6 @@ void setup()
   //Display.clear();
 }
 
-void alarm()
-{
-  digitalWrite(LED_RED, HIGH);
-  delay(500);
-  digitalWrite(LED_RED, HIGH);
-  delay(500);
-}
-
 
 void loop()
 {
@@ -98,7 +91,7 @@ void loop()
         buttonInput();
         if (detectInput)
         {
-          valueDigit = valueDigit % 4 + 1;    //1-2-3-4-1-2-3-4 on display
+          valueDigit = valueDigit % 4 + 1;    //cycle numbers 1-4 on display
           inputCode = String(finalInputCode) + String(valueDigit) + "---";
           detectInput = false;
         }
@@ -130,6 +123,9 @@ void loop()
             positionDigit = 1;
             inputCode = "1---";
             finalInputCode = "";
+            digitalWrite(LED_GREEN, HIGH);
+            delay(500);
+            digitalWrite(LED_GREEN, LOW);
           }
           buttonInput();
         }
@@ -139,12 +135,19 @@ void loop()
           digitalWrite(LED_RED, HIGH);
           delay(500);
           digitalWrite(LED_RED, LOW);
-
           //reset the code
           valueDigit = 1;
           positionDigit = 1;
           inputCode = "1---";
           finalInputCode = "";
+        }
+        if (LDR >= MIN_LDR_THRESHOLD)
+        {
+          valueDigit = 1;
+          positionDigit = 1;
+          inputCode = "1---";
+          finalInputCode = "";
+          digitalWrite(LED_GREEN, LOW);
         }
       }
     }
@@ -153,6 +156,7 @@ void loop()
       digitalWrite(LED_RED, HIGH);
       delay(2500);
       digitalWrite(LED_RED, LOW);
+      //reset the code
       valueDigit = 1;
       positionDigit = 1;
       inputCode = "1---";
@@ -171,5 +175,4 @@ void loop()
     inputCode = "1---";
     finalInputCode = "";
   }
-
 }
