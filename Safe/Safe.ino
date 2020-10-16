@@ -17,66 +17,53 @@ const int LED_GREEN = 5;
 const int BUZZER = 3;
 const int MIN_LDR_VALUE = 0;
 const int MAX_LDR_VALUE = 1023;
-const int MIN_LDR_THRESHOLD = 250;
 const int MAX_LDR_THRESHOLD = 900;
-bool isUnlocked = false;
+
+String passCode = "4312";   //predefined password
+String inputCode = "1---";
+String finalInputCode = "";
+int inputFailed = 0;    //failed attempts at the code
+
+int currentInputState;
+int currentConfirmState;
+int lastInputState;
+int lastConfirmState;
 
 
-//button debounce
-const int BUTTON_BOUNCE = 50;     //declare delay from beginning
-int lastButtonStateLeft = HIGH;
-int lastButtonStateRight = HIGH;
-int buttonStateLeft = HIGH;
-int buttonStateRight = HIGH;
-unsigned long lastDelay = 0;
+int valueDigit = 0;     //for entering the code 1-4
+int positionDigit = 1;  //position on the display
 
-int codeNumbers[] = {1, 2, 3, 4};   //available numbers at each position
-int posDisplay = 0;   //digit postition on display
+bool alreadyExecuted = false;
+bool detectInput = false;     //checks if all conditions have been met
+bool detectConfirm = false;   //checks if all conditions have been met
 
-int password[] = {4, 2, 1, 3};    //predefined password
-int inputPass[] = {};   //password input by user
-int indexPass = 0;
-
-
-
-
-//used for button debounce
-int read_button()
+int buttonInput()   //left (input) button press with button debounce
 {
-  int button = 0;
-  int buttonLeft = digitalRead(LEFT_BUTTON);
-  int buttonRight = digitalRead(RIGHT_BUTTON);
-
-  if (buttonLeft != lastButtonStateLeft)
+  lastInputState = currentInputState;
+  currentInputState = digitalRead(LEFT_BUTTON);
+  if (currentInputState == LOW && lastInputState == HIGH)
   {
-    lastDelay = millis();
-  }
-  if (buttonRight != lastButtonStateRight)
-  {
-    lastDelay = millis();
-  }
-
-  if ((millis() - lastDelay) > BUTTON_BOUNCE)
-  {
-
-    if (buttonStateLeft != buttonLeft)
+    delay(10);
+    if (currentInputState == LOW)
     {
-      buttonStateLeft = buttonLeft;
-      if (lastButtonStateLeft == LOW)
-        button = 1;   //left button
-    }
-    if (buttonStateRight != buttonRight)
-    {
-      buttonStateRight = buttonRight;
-      if (lastButtonStateRight == LOW)
-        button = 2;   //right button
+      detectInput = true;
     }
   }
-  lastButtonStateLeft = buttonLeft;
-  lastButtonStateRight = buttonRight;
-  return button;
 }
 
+int buttonConfirm()   //right (confirm) button press with button debounce
+{
+  lastConfirmState = currentConfirmState;
+  delay(10);
+  currentConfirmState = digitalRead(RIGHT_BUTTON);
+  if (currentConfirmState == LOW && lastConfirmState == HIGH)
+  {
+    if (currentConfirmState == LOW)
+    {
+      detectConfirm = true;
+    }
+  }
+}
 void setup()
 {
   pinMode(LEFT_BUTTON, INPUT_PULLUP);
@@ -86,123 +73,87 @@ void setup()
   pinMode(LED_GREEN, OUTPUT);
   pinMode(BUZZER, OUTPUT);
   Serial.begin(9600);
-  Display.clear();
-  Display.show("----");
+  //Display.clear();
 }
 
-//button == 1 - left button
-//button == 2 - right button
+void alarm()
+{
+  digitalWrite(LED_RED, HIGH);
+  delay(500);
+  digitalWrite(LED_RED, HIGH);
+  delay(500);
+}
 
-  int alarm() 
-  {
-    tone(BUZZER, 450);
-    delay(20);
-    tone(BUZZER, 900);
-    delay(20);
-  }
-  
+
 void loop()
 {
   int readLDR = analogRead(LDR);
-  int button = read_button();
-  //Display.show("----");
 
-//trigger alarm when LDR value changes above threshhold
-if (readLDR <= MAX_LDR_THRESHOLD)
-{
-  //iterate through display digits in order to input password
-  if (button == 1 && posDisplay == 0) //first digit
+  if (inputFailed < 3)
   {
-    Display.show(codeNumbers[indexPass] * 1000);
-    inputPass[posDisplay] = codeNumbers[indexPass];
-    indexPass++;
-    indexPass %= 4;
-    Serial.println(codeNumbers[indexPass]);
-  }
-  else if (button == 2 && posDisplay == 0)
-  {
-    indexPass = 0;
-    posDisplay++;
-    Serial.println(inputPass[posDisplay]);
-  }
-  else if (button == 1 && posDisplay == 1) //second digit
-  {
-    Display.show(codeNumbers[indexPass] * 100);
-    inputPass[posDisplay] = codeNumbers[indexPass];
-    indexPass++;
-    indexPass %= 4;
-    //Serial.println(codeNumbers[indexPass]);
-  }
-  else if (button == 2 && posDisplay == 1)
-  {
-    indexPass = 0;
-    posDisplay++;
-  }
-  else if (button == 1 && posDisplay == 2) //third digit
-  {
-    Display.show(codeNumbers[indexPass] * 10);
-    inputPass[posDisplay] = codeNumbers[indexPass];
-    indexPass++;
-    indexPass %= 4;
-    Serial.println(codeNumbers[indexPass]);
-  }
-  else if (button == 2 && posDisplay == 2)
-  {
-    indexPass = 0;
-    posDisplay++;
-    Serial.println(inputPass[posDisplay]);
-  }
+    if (readLDR <= MAX_LDR_THRESHOLD)
+    {
+      if (positionDigit <= 4)
+      {
+        buttonInput();
+        if (detectInput == false)
+        {
+          valueDigit = valueDigit % 4 + 1;    //1-2-3-4-1-2-3-4 on display
+          inputCode = String(finalInputCode) + String(valueDigit) + "---";
+          detectInput = false;
+        }
+        Display.show(inputCode);
+        buttonConfirm();
+        if (detectConfirm == false)
+        {
+          finalInputCode += valueDigit;
+          positionDigit++;
+          valueDigit = 1;
+          inputCode = String(finalInputCode) + "1---";
+          detectConfirm = false;
+        }
+      }
+      else
+      {
+        finalInputCode.remove(4, 3);
+        if (finalInputCode == passCode)
+        {
+          if (alreadyExecuted == false)
+          {
+            valueDigit = 1;
+            positionDigit = 1;
+            inputCode = "1---";
+            finalInputCode = "";
+          }
+        }
+        else
+        {
+          inputFailed++;
+          digitalWrite(LED_RED, HIGH);
+          delay(500);
+          digitalWrite(LED_RED, LOW);
 
-  else if (button == 1 && posDisplay == 3) //fourth digit
-  {
-    Display.show(codeNumbers[indexPass]);
-    inputPass[posDisplay] = codeNumbers[indexPass];
-    indexPass++;
-    indexPass %= 4;
-    Serial.println(codeNumbers[indexPass]);
+          //reset the code
+          valueDigit = 1;
+          positionDigit = 1;
+          inputCode = "1---";
+          finalInputCode = "";
+        }
+      }
+    }
+    else
+    {
+      tone(BUZZER, 500);
+      delay(5000);
+      noTone(BUZZER);
+    }
   }
-  else if (button == 2 && posDisplay == 3)
+  else
   {
-    indexPass = 0;
-    posDisplay++;
-    Serial.println(inputPass[posDisplay]);
+    for (int i = 5; i > 0; i--)
+    {
+      Display.show(i);
+      alarm();
+    }
   }
-}
-else 
-{
-  Display.show("----");
-  digitalWrite(LED_RED, HIGH);
-  alarm();
-  delay(5000);
-  digitalWrite(LED_RED, LOW);
-  noTone(BUZZER);
-}
-
-  //  if button-left = pressed:
-  //    Display.show(codeNumbers[index] * 1000)
-  //    input[pos] = codeNumbers[index];
-  //    index += 1
-  //    index %= 4
-  //  if button-right = pressed
-  //    index = 0
-  //    pos += 1
-
-  //  if ( button == 1)
-  //  {
-  //    Display.showCharAt(pos, '0' + codePos0);
-  //    pos++;
-  //    codePos0++;
-  //    if ( pos > 3)
-  //    {
-  //      pos = 0;
-  //    }
-  //  }
-  //  else if ( button == 2)
-  //  {
-  //    digitalWrite(LED_GREEN, LOW);
-  //    digitalWrite(LED_RED, HIGH);
-  //    delay(5000);
-  //    digitalWrite(LED_RED, LOW);
-  //  }
-  //  //Serial.println(readLDR);
 }
